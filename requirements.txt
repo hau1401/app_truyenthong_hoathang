@@ -1,2 +1,7 @@
 streamlit
 google-generativeai
+pandas
+numpy
+requests
+python-pptx
+gTTS
