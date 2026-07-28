@@ -4,6 +4,7 @@ from datetime import datetime
 import base64
 import io
 import hashlib
+import os
 
 # 1. Kiểm tra và nạp thư viện âm thanh (gTTS)
 try:
@@ -21,6 +22,13 @@ try:
     HAS_PPTX = True
 except ImportError:
     HAS_PPTX = False
+
+# 3. Kiểm tra và nạp thư viện PDF (fpdf2)
+try:
+    from fpdf import FPDF
+    HAS_FPDF = True
+except ImportError:
+    HAS_FPDF = False
 
 # Cấu hình trang & Giao diện tổng thể
 st.set_page_config(
@@ -43,7 +51,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Header trang trí: Cờ Tổ quốc (Bên trái) - Tiêu đề lớn (Ở giữa) - Cờ Tổ quốc (Bên phải)
+# Header trang trí
 col_flag1, col_title, col_flag2 = st.columns([1, 6, 1], vertical_alignment="center")
 
 with col_flag1:
@@ -82,7 +90,7 @@ if 'processed' not in st.session_state:
     st.session_state.digital_seal = ""
     st.session_state.history = []
 
-# 2. Thanh bên (Sidebar) cấu hình nâng cao
+# Thanh bên (Sidebar) cấu hình nâng cao
 with st.sidebar:
     st.markdown("### ⚙️ Cấu hình Tuyên truyền AI")
     
@@ -111,7 +119,7 @@ with st.sidebar:
         st.markdown("---")
         st.markdown(f"🗂️ **Đã xuất bản phiên này:** `{len(st.session_state.history)} bản tin`")
 
-# 3. Khu vực nạp dữ liệu mẫu nhanh
+# Khu vực nạp dữ liệu mẫu nhanh
 with st.expander("💡 Bấm vào đây để chọn nhanh mẫu văn bản test thử", expanded=False):
     col_s1, col_s2, col_s3 = st.columns(3)
     
@@ -132,7 +140,7 @@ with st.expander("💡 Bấm vào đây để chọn nhanh mẫu văn bản test
             st.session_state.raw_text = sample_3
             st.rerun()
 
-# 4. Bố cục chính chia 2 cột cân đối
+# Bố cục chính chia 2 cột cân đối
 col_input, col_output = st.columns([1, 1], gap="medium")
 
 with col_input:
@@ -189,7 +197,7 @@ with col_output:
         col_m2.metric("Thời lượng phát thanh", f"~{est_read_time} giây")
         col_m3.metric("Kênh phân phối", f"{len(kenh_phat_hanh)} nền tảng")
         
-        tab1, tab2, tab3 = st.tabs(["📱 Bài đăng Mạng Xã Hội", "🖼️ Thẻ Infographic Canva", "🎬 Kịch bản, Phát thanh & Word"])
+        tab1, tab2, tab3 = st.tabs(["📱 Bài đăng Mạng Xã Hội", "🖼️ Thẻ Infographic Canva", "🎬 Kịch bản, Phát thanh & PDF"])
         
         with tab1:
             with st.container(border=True):
@@ -202,9 +210,7 @@ with col_output:
                 st.markdown("🏷️ **Tags:** `#HoaThangSo #ChuyenDoiSo #UBNDHoàThắng #ThongBaoChinhThuc`")
                 st.download_button("📥 Tải tệp nội dung mạng xã hội (.txt)", data=st.session_state.raw_text, file_name="bai_dang_mxh.txt", use_container_width=True)
                 
-        # ==========================================
         # TAB 2: POWERPOINT HIGH-END CANVA DESIGN
-        # ==========================================
         with tab2:
             with st.container(border=True):
                 st.markdown("#### 🎨 Cấu trúc Slide Infographic Đề xuất")
@@ -219,30 +225,23 @@ with col_output:
                     st.error("⚠️ Hệ thống chưa cài thư viện python-pptx. Chạy lệnh: `pip install python-pptx`")
                 else:
                     prs = Presentation()
-                    # Cấu hình slide chuẩn 16:9 (Hiện đại, tối ưu cho màn hình và điện thoại)
                     prs.slide_width = Inches(13.333)
                     prs.slide_height = Inches(7.5)
 
-                    # Bảng màu thiết kế chuẩn Hành chính & Canva cao cấp
-                    red_color = RGBColor(179, 0, 0)       # Đỏ cờ chủ đạo
-                    yellow_color = RGBColor(255, 215, 0)  # Vàng sao
-                    blue_dark = RGBColor(10, 25, 47)      # Xanh than đậm (Sangen / Tiêu đề)
-                    bg_card = RGBColor(248, 249, 250)     # Xám rất nhạt cho nền Card
-                    border_card = RGBColor(222, 226, 230) # Viền xám nhẹ
-                    green_seal = RGBColor(19, 115, 51)    # Xanh lá xác thực số
+                    red_color = RGBColor(179, 0, 0)
+                    yellow_color = RGBColor(255, 215, 0)
+                    blue_dark = RGBColor(10, 25, 47)
+                    bg_card = RGBColor(248, 249, 250)
+                    border_card = RGBColor(222, 226, 230)
+                    green_seal = RGBColor(19, 115, 51)
 
-                    # ==========================================
-                    # SLIDE 1: BÌA (COVER) - PHONG CÁCH TỐI GIẢN HIỆN ĐẠI
-                    # ==========================================
+                    # SLIDE 1
                     slide1 = prs.slides.add_slide(prs.slide_layouts[6])
-                    
-                    # Thanh sọc dọc trang trí màu đỏ cờ bên trái (Điểm nhấn Canva)
                     stripe_left = slide1.shapes.add_shape(1, Inches(0.8), Inches(1.2), Inches(0.25), Inches(5.1))
                     stripe_left.fill.solid()
                     stripe_left.fill.fore_color.rgb = red_color
                     stripe_left.line.fill.background()
 
-                    # Tiêu đề chính căn trái theo sọc dọc
                     txBox_title = slide1.shapes.add_textbox(Inches(1.4), Inches(1.8), Inches(11.0), Inches(2.5))
                     tf_title = txBox_title.text_frame
                     tf_title.word_wrap = True
@@ -252,7 +251,6 @@ with col_output:
                     p_title.font.size = Pt(36)
                     p_title.font.color.rgb = blue_dark
 
-                    # Khung thông tin cơ quan ban hành phía dưới
                     txBox_sub = slide1.shapes.add_textbox(Inches(1.4), Inches(4.8), Inches(11.0), Inches(1.2))
                     tf_sub = txBox_sub.text_frame
                     p_sub1 = tf_sub.paragraphs[0]
@@ -266,12 +264,8 @@ with col_output:
                     p_sub2.font.size = Pt(14)
                     p_sub2.font.color.rgb = RGBColor(100, 100, 100)
 
-                    # ==========================================
-                    # SLIDE 2: NỘI DUNG CHÍNH - THẺ NỔI (CARD UI)
-                    # ==========================================
+                    # SLIDE 2
                     slide2 = prs.slides.add_slide(prs.slide_layouts[6])
-                    
-                    # Tiêu đề Slide có gạch chân nhỏ
                     txBox_h2 = slide2.shapes.add_textbox(Inches(0.8), Inches(0.6), Inches(11.7), Inches(0.8))
                     p_h2 = txBox_h2.text_frame.paragraphs[0]
                     p_h2.text = "NỘI DUNG TRỌNG TÂM"
@@ -284,14 +278,12 @@ with col_output:
                     line_h2.fill.fore_color.rgb = red_color
                     line_h2.line.fill.background()
 
-                    # Thẻ chứa nội dung (Card container màu xám nhạt tạo chiều sâu)
                     card_s2 = slide2.shapes.add_shape(1, Inches(0.8), Inches(1.6), Inches(11.733), Inches(5.0))
                     card_s2.fill.solid()
                     card_s2.fill.fore_color.rgb = bg_card
                     card_s2.line.color.rgb = border_card
                     card_s2.line.width = Pt(1)
 
-                    # Văn bản bên trong Thẻ
                     txBox_b2 = slide2.shapes.add_textbox(Inches(1.1), Inches(1.9), Inches(11.1), Inches(4.4))
                     tf_b2 = txBox_b2.text_frame
                     tf_b2.word_wrap = True
@@ -300,11 +292,8 @@ with col_output:
                     p_b2.font.size = Pt(18)
                     p_b2.font.color.rgb = RGBColor(33, 37, 41)
 
-                    # ==========================================
-                    # SLIDE 3: HÀNH ĐỘNG & XÁC THỰC SỐ - THẺ ĐẶC BIỆT
-                    # ==========================================
+                    # SLIDE 3
                     slide3 = prs.slides.add_slide(prs.slide_layouts[6])
-                    
                     txBox_h3 = slide3.shapes.add_textbox(Inches(0.8), Inches(0.6), Inches(11.7), Inches(0.8))
                     p_h3 = txBox_h3.text_frame.paragraphs[0]
                     p_h3.text = "TỔ CHỨC THỰC HIỆN & XÁC THỰC SỐ"
@@ -317,10 +306,9 @@ with col_output:
                     line_h3.fill.fore_color.rgb = red_color
                     line_h3.line.fill.background()
 
-                    # Thẻ Kêu gọi hành động
                     card_action = slide3.shapes.add_shape(1, Inches(0.8), Inches(1.6), Inches(11.733), Inches(1.5))
                     card_action.fill.solid()
-                    card_action.fill.fore_color.rgb = RGBColor(254, 242, 242) # Đỏ rất nhạt
+                    card_action.fill.fore_color.rgb = RGBColor(254, 242, 242)
                     card_action.line.color.rgb = RGBColor(254, 202, 202)
                     card_action.line.width = Pt(1)
 
@@ -333,13 +321,12 @@ with col_output:
                     p_b3.font.bold = True
                     p_b3.font.color.rgb = red_color
 
-                    # Thẻ Khung Xác thực Số (Digital Seal Box)
                     seal_box = slide3.shapes.add_shape(1, Inches(3.16), Inches(3.4), Inches(7.0), Inches(3.1))
                     seal_box.fill.solid()
-                    seal_box.fill.fore_color.rgb = RGBColor(230, 244, 234) # Xanh lá nhạt
+                    seal_box.fill.fore_color.rgb = RGBColor(230, 244, 234)
                     seal_box.line.color.rgb = green_seal
                     seal_box.line.width = Pt(1.5)
-                    seal_box.line.dash_style = 7 # Đường viền đứt nét điện tử
+                    seal_box.line.dash_style = 7
 
                     txBox_seal = slide3.shapes.add_textbox(Inches(3.3), Inches(3.7), Inches(6.7), Inches(2.5))
                     tf_seal = txBox_seal.text_frame
@@ -364,9 +351,6 @@ with col_output:
                     p_seal3.font.color.rgb = RGBColor(100, 100, 100)
                     p_seal3.alignment = PP_ALIGN.CENTER
 
-                    # ==========================================
-                    # FOOTER CHUNG CHO TẤT CẢ SLIDES
-                    # ==========================================
                     for slide in prs.slides:
                         footer = slide.shapes.add_textbox(Inches(0.8), Inches(7.1), Inches(11.733), Inches(0.3))
                         p_foot = footer.text_frame.paragraphs[0]
@@ -374,7 +358,6 @@ with col_output:
                         p_foot.font.size = Pt(10)
                         p_foot.font.color.rgb = RGBColor(140, 140, 140)
 
-                    # Lưu và đóng gói ra Nút Tải về
                     ppt_stream = io.BytesIO()
                     prs.save(ppt_stream)
                     ppt_stream.seek(0)
@@ -395,7 +378,7 @@ with col_output:
                 
                 if st.button("🔊 Nghe thử bản tin phát thanh trực tiếp"):
                     if not HAS_GTTS:
-                        st.error("⚠️ Hệ thống chưa cài thư viện gTTS. Vui lòng chạy lệnh: pip install gTTS")
+                        st.error("⚠️ Hệ thống chưa cài thư viện gTTS. Vui lòng chạy lệnh: `pip install gTTS`")
                     else:
                         with st.spinner("Đang khởi tạo giọng đọc AI..."):
                             try:
@@ -408,113 +391,117 @@ with col_output:
                                 st.error(f"Lỗi khởi tạo âm thanh: {e}")
                 
                 st.markdown("---")
-                st.markdown("#### 📄 Xuất Báo cáo Hành chính chuẩn Word (.doc)")
+                st.markdown("#### 📄 Xuất Báo cáo Hành chính chuẩn PDF (.pdf)")
                 
                 today = datetime.now()
                 
-                paragraphs = st.session_state.raw_text.split('\n')
-                formatted_content = ""
-                for p in paragraphs:
-                    if p.strip():
-                        formatted_content += f"<p class='noi-dung'>{p.strip()}</p>\n"
+                if not HAS_FPDF:
+                    st.error("⚠️ Hệ thống chưa cài thư viện fpdf2. Vui lòng chạy lệnh: `pip install fpdf2`")
+                else:
+                    # SỬ DỤNG TRỰC TIẾP PHÔNG HỆ THỐNG WINDOWS (Arial) ĐỂ KHẮC PHỤC HOÀN TOÀN LỖI TIẾNG VIỆT
+                    font_reg = "C:/Windows/Fonts/arial.ttf"
+                    font_bold = "C:/Windows/Fonts/arialbd.ttf"
+                    font_italic = "C:/Windows/Fonts/ariali.ttf"
+                    
+                    font_ready = os.path.exists(font_reg)
 
-                word_html = f"""
-                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-                <head>
-                <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-                <title>Báo cáo hành chính</title>
-                <style>
-                    @page WordSection1 {{
-                        size: 21.0cm 29.7cm;
-                        margin: 2.0cm 2.0cm 2.0cm 3.0cm;
-                        mso-header-margin: 35.4pt;
-                        mso-footer-margin: 35.4pt;
-                        mso-paper-source: 0;
-                    }}
-                    div.WordSection1 {{ page: WordSection1; }}
-                    body {{ font-family: "Times New Roman", Times, serif; font-size: 14pt; }}
-                    table {{ border-collapse: collapse; width: 100%; border: none; }}
-                    td {{ border: none; vertical-align: top; padding: 0; }}
-                    .cq-chu-quan {{ font-size: 12pt; text-align: center; }}
-                    .cq-ban-hanh {{ font-size: 13pt; font-weight: bold; text-align: center; }}
-                    .quoc-hieu {{ font-size: 12pt; font-weight: bold; text-align: center; }}
-                    .tieu-ngu {{ font-size: 14pt; font-weight: bold; text-align: center; }}
-                    .ngay-thang {{ font-size: 14pt; font-style: italic; text-align: center; }}
-                    .so-hieu {{ font-size: 13pt; text-align: center; }}
-                    .ten-van-ban {{ font-size: 14pt; font-weight: bold; text-align: center; margin-top: 18pt; margin-bottom: 18pt; text-transform: uppercase; }}
-                    .noi-dung {{ 
-                        text-align: justify; 
-                        text-indent: 1.27cm; 
-                        line-height: 150%; 
-                        margin-top: 6pt; 
-                        margin-bottom: 6pt; 
-                    }}
-                    .seal-box {{ border: 1px dashed #137333; padding: 12px; margin-top: 24pt; font-family: "Courier New", monospace; font-size: 12pt; color: #137333; }}
-                </style>
-                </head>
-                <body>
-                <div class="WordSection1">
-                    <table>
-                        <tr>
-                            <td width="40%" style="text-align: center;">
-                                <div class="cq-chu-quan">UBND HUYỆN...</div>
-                                <div class="cq-ban-hanh">UBND XÃ HÒA THẮNG</div>
-                                <hr style="width: 40%; border: 0; border-top: 1px solid black; margin-top: 2px; margin-bottom: 4px;">
-                                <div class="so-hieu">Số: {len(st.session_state.history) + 1}/TB-UBND</div>
-                            </td>
-                            <td width="60%" style="text-align: center;">
-                                <div class="quoc-hieu">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-                                <div class="tieu-ngu">Độc lập - Tự do - Hạnh phúc</div>
-                                <hr style="width: 40%; border: 0; border-top: 1px solid black; margin-top: 2px; margin-bottom: 4px;">
-                                <div class="ngay-thang">Hòa Thắng, ngày {today.strftime("%d")} tháng {today.strftime("%m")} năm {today.strftime("%Y")}</div>
-                            </td>
-                        </tr>
-                    </table>
-                    
-                    <div class="ten-van-ban">{st.session_state.tieu_de}</div>
-                    
-                    <p class="noi-dung" style="font-weight: bold;">
-                        {st.session_state.mo_dau}
-                    </p>
+                    class AdminPDF(FPDF):
+                        def header(self):
+                            pass
+                        def footer(self):
+                            self.set_y(-15)
+                            if font_ready:
+                                self.set_font("ArialUnicode", "", 9)
+                            else:
+                                self.set_font("helvetica", "I", 9)
+                            self.cell(0, 10, f"Trang {self.page_no()}", align="C")
 
-                    {formatted_content}
+                    pdf = AdminPDF(orientation='P', unit='mm', format='A4')
+                    
+                    if font_ready:
+                        pdf.add_font("ArialUnicode", "", font_reg)
+                        pdf.add_font("ArialUnicode", "B", font_bold)
+                        pdf.add_font("ArialUnicode", "I", font_italic)
 
-                    <p class="noi-dung" style="font-style: italic;">
-                        {st.session_state.hanh_dong}
-                    </p>
+                    pdf.add_page()
                     
-                    <div class="seal-box">
-                        <b>🛡️ HUY HIỆU XÁC THỰC CHÍNH THỐNG (DIGITAL SEAL):</b><br>
-                        Mã tra cứu số: {st.session_state.digital_seal}<br>
-                        <i>(Văn bản được xác thực ký số tự động trên hệ thống Cổng Thông tin)</i>
-                    </div>
+                    def set_pdf_font(style="", size=11):
+                        if font_ready:
+                            pdf.set_font("ArialUnicode", style, size)
+                        else:
+                            pdf.set_font("helvetica", style, size)
                     
-                    <br>
+                    # Thiết lập lề chuẩn hành chính
+                    pdf.set_margins(30, 20, 20)
+                    pdf.set_auto_page_break(auto=True, margin=20)
                     
-                    <table>
-                        <tr>
-                            <td width="50%" style="font-size: 12pt; line-height: 120%;">
-                                <b><i>Nơi nhận:</i></b><br>
-                                - Thường trực Đảng ủy;<br>
-                                - Thường trực HĐND;<br>
-                                - Lưu: VT.
-                            </td>
-                            <td width="50%" style="text-align: center;">
-                                <div style="font-size: 13pt; font-weight: bold;">TM. ỦY BAN NHÂN DÂN XÃ HÒA THẮNG</div>
-                                <div style="font-size: 13pt; font-weight: bold;">KT. CHỦ TỊCH</div>
-                                <div style="font-size: 13pt; font-weight: bold;">PHÓ CHỦ TỊCH</div>
-                                <br><br><br><br><br>
-                                <div style="font-size: 14pt; font-weight: bold;">(Ký, đóng dấu)</div>
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-                </body>
-                </html>
-                """
-                
-                b64_word = base64.b64encode(word_html.encode('utf-8-sig')).decode("utf-8")
-                word_download_link = f'<a href="data:application/vnd.ms-word;charset=utf-8;base64,{b64_word}" download="BaoCaoHanChinh_HoaThang_{today.strftime("%Y%m%d")}.doc" style="display:inline-block;padding:10px 20px;background-color:#b30000;color:white;text-decoration:none;border-radius:6px;font-weight:bold;text-align:center;width:100%;">📥 Tải xuống Báo cáo hành chính chuẩn (.doc)</a>'
-                st.markdown(word_download_link, unsafe_allow_html=True)
+                    # Header: Quốc hiệu & Cơ quan chủ quản
+                    set_pdf_font("B", 10)
+                    pdf.cell(75, 5, "UBND XÃ HÒA THẮNG", align="C")
+                    pdf.cell(85, 5, "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM", align="C", new_x="LMARGIN", new_y="NEXT")
+                    
+                    set_pdf_font("", 10)
+                    pdf.cell(75, 5, "Số: " + str(len(st.session_state.history)) + "/TB-UBND", align="C")
+                    set_pdf_font("B", 10)
+                    pdf.cell(85, 5, "Độc lập - Tự do - Hạnh phúc", align="C", new_x="LMARGIN", new_y="NEXT")
+                    
+                    set_pdf_font("I", 10)
+                    pdf.set_x(105)
+                    pdf.cell(85, 6, f"Hòa Thắng, ngày {today.strftime('%d')} tháng {today.strftime('%m')} năm {today.strftime('%Y')}", align="C", new_x="LMARGIN", new_y="NEXT")
+                    pdf.ln(8)
+                    
+                    # Tiêu đề văn bản
+                    set_pdf_font("B", 12)
+                    pdf.multi_cell(160, 6, st.session_state.tieu_de.upper(), align="C")
+                    pdf.ln(6)
+                    
+                    # Lời mở đầu
+                    set_pdf_font("B", 11)
+                    pdf.multi_cell(160, 6, st.session_state.mo_dau)
+                    pdf.ln(4)
+                    
+                    # Nội dung chính
+                    set_pdf_font("", 11)
+                    paragraphs = st.session_state.raw_text.split('\n')
+                    for p in paragraphs:
+                        if p.strip():
+                            pdf.multi_cell(160, 6, p.strip())
+                            pdf.ln(3)
+                            
+                    # Hành động / Kết luận
+                    set_pdf_font("I", 11)
+                    pdf.multi_cell(160, 6, st.session_state.hanh_dong)
+                    pdf.ln(6)
+                    
+                    # Huy hiệu xác thực số (Digital Seal)
+                    set_pdf_font("", 10)
+                    pdf.set_text_color(19, 115, 51)
+                    pdf.multi_cell(160, 5, f"[DIGITAL SEAL: {st.session_state.digital_seal}]\n(Văn bản được xác thực tự động trên Cổng Thông tin Xã Hòa Thắng)")
+                    pdf.set_text_color(0, 0, 0)
+                    pdf.ln(10)
+                    
+                    # Phần ký tên
+                    pdf.set_x(110)
+                    set_pdf_font("B", 11)
+                    pdf.cell(70, 5, "TM. ỦY BAN NHÂN DÂN XÃ HÒA THẮNG", align="C", new_x="LMARGIN", new_y="NEXT")
+                    pdf.set_x(110)
+                    set_pdf_font("B", 10)
+                    pdf.cell(70, 5, "KT. CHỦ TỊCH - PHÓ CHỦ TỊCH", align="C", new_x="LMARGIN", new_y="NEXT")
+                    pdf.set_x(110)
+                    set_pdf_font("I", 9)
+                    pdf.cell(70, 5, "(Ký, đóng dấu)", align="C")
+
+                    # Xuất file PDF vào bộ nhớ tạm để tải xuống
+                    pdf_output = io.BytesIO()
+                    pdf.output(pdf_output)
+                    pdf_output.seek(0)
+                    
+                    st.download_button(
+                        label="📥 Tải xuống Báo cáo hành chính chuẩn (.pdf)",
+                        data=pdf_output,
+                        file_name=f"BaoCaoHanChinh_HoaThang_{today.strftime('%Y%m%d')}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
     else:
         st.info("👈 Vui lòng nhập dữ liệu hoặc chọn mẫu nhanh ở trên, sau đó bấm nút **'Kích hoạt AI Tổng hợp & Đa kênh hóa'** để xem kết quả xuất bản.")
