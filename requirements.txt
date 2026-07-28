@@ -1,10 +1,4 @@
 streamlit
 google-generativeai
-protobuf
 pandas
-numpy
 requests
-gTTS
-python-pptx
-xlsxwriter
-lxml
