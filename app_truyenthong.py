@@ -240,7 +240,7 @@ with col_output:
                     stripe_left = slide1.shapes.add_shape(1, Inches(0.8), Inches(1.2), Inches(0.25), Inches(5.1))
                     stripe_left.fill.solid()
                     stripe_left.fill.fore_color.rgb = red_color
-                    stripe_left.line.fill.background()
+                    stripe_left.line.color.rgb = red_color
 
                     txBox_title = slide1.shapes.add_textbox(Inches(1.4), Inches(1.8), Inches(11.0), Inches(2.5))
                     tf_title = txBox_title.text_frame
@@ -276,7 +276,7 @@ with col_output:
                     line_h2 = slide2.shapes.add_shape(1, Inches(0.8), Inches(1.3), Inches(2.5), Inches(0.04))
                     line_h2.fill.solid()
                     line_h2.fill.fore_color.rgb = red_color
-                    line_h2.line.fill.background()
+                    line_h2.line.color.rgb = red_color
 
                     card_s2 = slide2.shapes.add_shape(1, Inches(0.8), Inches(1.6), Inches(11.733), Inches(5.0))
                     card_s2.fill.solid()
@@ -304,7 +304,7 @@ with col_output:
                     line_h3 = slide3.shapes.add_shape(1, Inches(0.8), Inches(1.3), Inches(3.2), Inches(0.04))
                     line_h3.fill.solid()
                     line_h3.fill.fore_color.rgb = red_color
-                    line_h3.line.fill.background()
+                    line_h3.line.color.rgb = red_color
 
                     card_action = slide3.shapes.add_shape(1, Inches(0.8), Inches(1.6), Inches(11.733), Inches(1.5))
                     card_action.fill.solid()
@@ -326,7 +326,6 @@ with col_output:
                     seal_box.fill.fore_color.rgb = RGBColor(230, 244, 234)
                     seal_box.line.color.rgb = green_seal
                     seal_box.line.width = Pt(1.5)
-                    seal_box.line.dash_style = 7
 
                     txBox_seal = slide3.shapes.add_textbox(Inches(3.3), Inches(3.7), Inches(6.7), Inches(2.5))
                     tf_seal = txBox_seal.text_frame
@@ -398,12 +397,19 @@ with col_output:
                 if not HAS_FPDF:
                     st.error("⚠️ Hệ thống chưa cài thư viện fpdf2. Vui lòng chạy lệnh: `pip install fpdf2`")
                 else:
-                    # SỬ DỤNG TRỰC TIẾP PHÔNG HỆ THỐNG WINDOWS (Arial) ĐỂ KHẮC PHỤC HOÀN TOÀN LỖI TIẾNG VIỆT
-                    font_reg = "C:/Windows/Fonts/arial.ttf"
-                    font_bold = "C:/Windows/Fonts/arialbd.ttf"
-                    font_italic = "C:/Windows/Fonts/ariali.ttf"
-                    
-                    font_ready = os.path.exists(font_reg)
+                    # Cấu hình đường dẫn font chữ đa nền tảng (Windows / Linux / Streamlit Cloud)
+                    if os.path.exists("C:/Windows/Fonts/arial.ttf"):
+                        font_reg = "C:/Windows/Fonts/arial.ttf"
+                        font_bold = "C:/Windows/Fonts/arialbd.ttf"
+                        font_italic = "C:/Windows/Fonts/ariali.ttf"
+                    elif os.path.exists("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"):
+                        font_reg = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+                        font_bold = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+                        font_italic = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf"
+                    else:
+                        font_reg = ""
+
+                    font_ready = os.path.exists(font_reg) if font_reg else False
 
                     class AdminPDF(FPDF):
                         def header(self):
@@ -411,7 +417,7 @@ with col_output:
                         def footer(self):
                             self.set_y(-15)
                             if font_ready:
-                                self.set_font("ArialUnicode", "", 9)
+                                self.set_font("CustomFont", "", 9)
                             else:
                                 self.set_font("helvetica", "I", 9)
                             self.cell(0, 10, f"Trang {self.page_no()}", align="C")
@@ -419,15 +425,15 @@ with col_output:
                     pdf = AdminPDF(orientation='P', unit='mm', format='A4')
                     
                     if font_ready:
-                        pdf.add_font("ArialUnicode", "", font_reg)
-                        pdf.add_font("ArialUnicode", "B", font_bold)
-                        pdf.add_font("ArialUnicode", "I", font_italic)
+                        pdf.add_font("CustomFont", "", font_reg)
+                        pdf.add_font("CustomFont", "B", font_bold)
+                        pdf.add_font("CustomFont", "I", font_italic)
 
                     pdf.add_page()
                     
                     def set_pdf_font(style="", size=11):
                         if font_ready:
-                            pdf.set_font("ArialUnicode", style, size)
+                            pdf.set_font("CustomFont", style, size)
                         else:
                             pdf.set_font("helvetica", style, size)
                     
