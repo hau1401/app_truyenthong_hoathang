@@ -398,12 +398,14 @@ with col_output:
                 if not HAS_FPDF:
                     st.error("⚠️ Hệ thống chưa cài thư viện fpdf2. Vui lòng chạy lệnh: `pip install fpdf2`")
                 else:
-                    # SỬ DỤNG TRỰC TIẾP PHÔNG HỆ THỐNG WINDOWS (Arial) ĐỂ KHẮC PHỤC HOÀN TOÀN LỖI TIẾNG VIỆT
-                    font_reg = "C:/Windows/Fonts/arial.ttf"
-                    font_bold = "C:/Windows/Fonts/arialbd.ttf"
-                    font_italic = "C:/Windows/Fonts/ariali.ttf"
-                    
-                    font_ready = os.path.exists(font_reg)
+                    # SỬ DỤNG FILE arial.ttf ĐÃ UPLOAD TRỰC TIẾP TRÊN GITHUB (CÙNG THƯ MỤC)
+                    if os.path.exists("arial.ttf"):
+                        font_reg = "arial.ttf"
+                        font_bold = "arial.ttf"  # Dùng tạm font chính nếu thiếu bản bold
+                        font_italic = "arial.ttf"
+                        font_ready = True
+                    else:
+                        font_ready = False
 
                     class AdminPDF(FPDF):
                         def header(self):
