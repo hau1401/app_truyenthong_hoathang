@@ -120,12 +120,13 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### 📱 Mã QR Truy cập Cổng")
     if HAS_QR:
-        # Đã cập nhật đúng URL thực tế của bạn trên Streamlit Cloud
+        # Đường dẫn chính thức của bạn trên Streamlit Cloud
         app_url = "https://apptruyenthonghoathang-327b7woh6h6pqzvyzwg8pz.streamlit.app/"
         qr = qrcode.QRCode(version=1, box_size=3, border=2)
         qr.add_data(app_url)
         qr.make(fit=True)
-        img_qr = qr.make_image(fill_color="#b30000", back_color="#f4f6f9")
+        # Đã đổi mã QR thành màu đen (#000000)
+        img_qr = qr.make_image(fill_color="#000000", back_color="#ffffff")
         
         buf = io.BytesIO()
         img_qr.save(buf, format="PNG")
