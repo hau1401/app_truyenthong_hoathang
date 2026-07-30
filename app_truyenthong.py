@@ -30,6 +30,13 @@ try:
 except ImportError:
     HAS_FPDF = False
 
+# 4. Kiểm tra và nạp thư viện mã QR (qrcode)
+try:
+    import qrcode
+    HAS_QR = True
+except ImportError:
+    HAS_QR = False
+
 # Cấu hình trang & Giao diện tổng thể
 st.set_page_config(
     page_title="Cổng Quản trị & Tuyên truyền Số - Xã Hòa Thắng",
@@ -90,7 +97,7 @@ if 'processed' not in st.session_state:
     st.session_state.digital_seal = ""
     st.session_state.history = []
 
-# Thanh bên (Sidebar) cấu hình nâng cao
+# Thanh bên (Sidebar) cấu hình nâng cao & Mã QR
 with st.sidebar:
     st.markdown("### ⚙️ Cấu hình Tuyên truyền AI")
     
@@ -109,6 +116,21 @@ with st.sidebar:
         ["Trang thông tin điện tử xã", "Fanpage UBND Hòa Thắng", "Zalo OA Xã Hòa Thắng", "Hệ thống Loa truyền thanh không dây"],
         default=["Fanpage UBND Hòa Thắng", "Zalo OA Xã Hòa Thắng"]
     )
+
+    st.markdown("---")
+    st.markdown("### 📱 Mã QR Truy cập Cổng")
+    if HAS_QR:
+        app_url = "https://hoathang-chuyendoiso.streamlit.app"
+        qr = qrcode.QRCode(version=1, box_size=3, border=2)
+        qr.add_data(app_url)
+        qr.make(fit=True)
+        img_qr = qr.make_image(fill_color="#b30000", back_color="#f4f6f9")
+        
+        buf = io.BytesIO()
+        img_qr.save(buf, format="PNG")
+        st.image(buf.getvalue(), caption="Quét mã QR để mở Cổng Thông Tin", use_container_width=True)
+    else:
+        st.info("Cài đặt thư viện `qrcode` để hiển thị mã QR tự động.")
 
     st.markdown("---")
     st.markdown("📊 **Chỉ số Hiệu quả Mô hình:**")
@@ -398,10 +420,9 @@ with col_output:
                 if not HAS_FPDF:
                     st.error("⚠️ Hệ thống chưa cài thư viện fpdf2. Vui lòng chạy lệnh: `pip install fpdf2`")
                 else:
-                    # SỬ DỤNG FILE arial.ttf ĐÃ UPLOAD TRỰC TIẾP TRÊN GITHUB (CÙNG THƯ MỤC)
                     if os.path.exists("arial.ttf"):
                         font_reg = "arial.ttf"
-                        font_bold = "arial.ttf"  # Dùng tạm font chính nếu thiếu bản bold
+                        font_bold = "arial.ttf"
                         font_italic = "arial.ttf"
                         font_ready = True
                     else:
@@ -433,11 +454,9 @@ with col_output:
                         else:
                             pdf.set_font("helvetica", style, size)
                     
-                    # Thiết lập lề chuẩn hành chính
                     pdf.set_margins(30, 20, 20)
                     pdf.set_auto_page_break(auto=True, margin=20)
                     
-                    # Header: Quốc hiệu & Cơ quan chủ quản
                     set_pdf_font("B", 10)
                     pdf.cell(75, 5, "UBND XÃ HÒA THẮNG", align="C")
                     pdf.cell(85, 5, "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM", align="C", new_x="LMARGIN", new_y="NEXT")
@@ -452,17 +471,14 @@ with col_output:
                     pdf.cell(85, 6, f"Hòa Thắng, ngày {today.strftime('%d')} tháng {today.strftime('%m')} năm {today.strftime('%Y')}", align="C", new_x="LMARGIN", new_y="NEXT")
                     pdf.ln(8)
                     
-                    # Tiêu đề văn bản
                     set_pdf_font("B", 12)
                     pdf.multi_cell(160, 6, st.session_state.tieu_de.upper(), align="C")
                     pdf.ln(6)
                     
-                    # Lời mở đầu
                     set_pdf_font("B", 11)
                     pdf.multi_cell(160, 6, st.session_state.mo_dau)
                     pdf.ln(4)
                     
-                    # Nội dung chính
                     set_pdf_font("", 11)
                     paragraphs = st.session_state.raw_text.split('\n')
                     for p in paragraphs:
@@ -470,19 +486,16 @@ with col_output:
                             pdf.multi_cell(160, 6, p.strip())
                             pdf.ln(3)
                             
-                    # Hành động / Kết luận
                     set_pdf_font("I", 11)
                     pdf.multi_cell(160, 6, st.session_state.hanh_dong)
                     pdf.ln(6)
                     
-                    # Huy hiệu xác thực số (Digital Seal)
                     set_pdf_font("", 10)
                     pdf.set_text_color(19, 115, 51)
                     pdf.multi_cell(160, 5, f"[DIGITAL SEAL: {st.session_state.digital_seal}]\n(Văn bản được xác thực tự động trên Cổng Thông tin Xã Hòa Thắng)")
                     pdf.set_text_color(0, 0, 0)
                     pdf.ln(10)
                     
-                    # Phần ký tên
                     pdf.set_x(110)
                     set_pdf_font("B", 11)
                     pdf.cell(70, 5, "TM. ỦY BAN NHÂN DÂN XÃ HÒA THẮNG", align="C", new_x="LMARGIN", new_y="NEXT")
@@ -493,7 +506,6 @@ with col_output:
                     set_pdf_font("I", 9)
                     pdf.cell(70, 5, "(Ký, đóng dấu)", align="C")
 
-                    # Xuất file PDF vào bộ nhớ tạm để tải xuống
                     pdf_output = io.BytesIO()
                     pdf.output(pdf_output)
                     pdf_output.seek(0)
