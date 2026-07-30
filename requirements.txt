@@ -6,3 +6,5 @@ requests
 python-pptx
 gTTS
 fpdf2
+qrcode
+pillow
